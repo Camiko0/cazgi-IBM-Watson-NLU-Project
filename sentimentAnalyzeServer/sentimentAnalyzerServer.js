@@ -5,7 +5,7 @@ const cors_app = require('cors');
 
 dotenv.config();
 
-function getNULInstance(analyzeParams, text, emotion, res) {
+function getNLUInstance() {
     let api_key = process.env.API_KEY;
     let api_url = process.env.API_URL;
 
@@ -19,64 +19,7 @@ function getNULInstance(analyzeParams, text, emotion, res) {
         }),
         serviceUrl: api_url
     });
-
-    // Se arma el parámetro a enviar a analizar
-    // Se determina de acuerdo a si es texto o url y emotion o sentiment
-    var analyzeParamsNLU = {};
-    if (text) {
-        analyzeParamsNLU = {
-            'text': analyzeParams,
-            'features': {
-                'keywords': {
-                    'emotion': emotion,
-                    'sentiment': !emotion,
-                    'limit': 5,
-                }
-            },
-        };
-    } else {
-        analyzeParamsNLU = {
-            'url': analyzeParams,
-            'features': {
-                'keywords': {
-                    'emotion': emotion,
-                    'sentiment': !emotion,
-                    'limit': 5,
-                },
-            },
-        };
-    }
-
-    // Analizar text o url
-    naturalLanguageUnderstanding.analyze(analyzeParamsNLU).then(data => {
-        //console.log(data.result.keywords.sort((a, b) => a.count < b.count ? 1: -1));
-        res.status(200);
-        if (data.result.keywords) {
-            var dataFilter = data.result.keywords.sort((a, b) => a.count < b.count ? 1 : -1)[0];
-            console.log(dataFilter);
-            if (emotion) {
-                if (dataFilter.emotion) {
-                    // Devuelve la información de las 5 emociones
-                    res.send(dataFilter.emotion);
-                } else {
-                    res.send('Without data');
-                }
-
-            } else {
-                if (dataFilter.sentiment.label) {
-                    // Devuelve la información del sentimiento
-                    res.send(dataFilter.sentiment.label);
-                } else {
-                    res.send('Without data');
-                }
-            }
-        } else {
-            res.send('Without data');
-        }
-    }).catch(error => {
-        res.status(500);
-        res.send(error);
-    });
+    return naturalLanguageUnderstanding;
 }
 
 app.use(express.static('client'))
@@ -87,20 +30,108 @@ app.get("/", (req, res) => {
     res.render('index.html');
 });
 
-app.get("/url/emotion", (req, res) => {
-    getNULInstance(req.query.url, false, true, res);
+app.get("/url/emotion", (req,res) => {
+    let urlToAnalyze = req.query.url
+    const analyzeParams = 
+    {
+        "url": urlToAnalyze,
+        "features": {
+            "keywords": {
+                "emotion": true,
+                "limit": 1
+            }
+        }
+    }
+
+    const naturalLanguageUnderstanding = getNLUInstance();
+
+    naturalLanguageUnderstanding.analyze(analyzeParams)
+    .then(analysisResults => {
+        //Retrieve the emotion and return it as a formatted string
+        return res.send(analysisResults.result.keywords[0].emotion,null,2);
+    })
+    .catch(err => {
+        return res.send("Could not do desired operation "+err);
+    });
 });
 
-app.get("/url/sentiment", (req, res) => {
-    getNULInstance(req.query.url, false, false, res);
+app.get("/url/sentiment", (req,res) => {
+    let urlToAnalyze = req.query.url
+    const analyzeParams = 
+    {
+        "url": urlToAnalyze,
+        "features": {
+            "keywords": {
+                "sentiment": true,
+                "limit": 1
+            }
+        }
+    }
+
+    const naturalLanguageUnderstanding = getNLUInstance();
+
+    naturalLanguageUnderstanding.analyze(analyzeParams)
+    .then(analysisResults => {
+        //Retrieve the sentiment and return it as a formatted string
+
+        return res.send(analysisResults.result.keywords[0].sentiment,null,2);
+    })
+    .catch(err => {
+        return res.send("Could not do desired operation "+err);
+    });
 });
 
-app.get("/text/emotion", (req, res) => {
-    getNULInstance(req.query.text, true, true, res);
+app.get("/text/emotion", (req,res) => {
+    let textToAnalyze = req.query.text
+    const analyzeParams = 
+    {
+        "text": textToAnalyze,
+        "features": {
+            "keywords": {
+                "emotion": true,
+                "limit": 1
+            }
+        }
+    }
+
+    const naturalLanguageUnderstanding = getNLUInstance();
+
+    naturalLanguageUnderstanding.analyze(analyzeParams)
+    .then(analysisResults => {
+        //Retrieve the emotion and return it as a formatted string
+
+        return res.send(analysisResults.result.keywords[0].emotion,null,2);
+    })
+    .catch(err => {
+        return res.send("Could not do desired operation "+err);
+    });
 });
 
-app.get("/text/sentiment", (req, res) => {
-    getNULInstance(req.query.text, true, false, res);
+app.get("/text/sentiment", (req,res) => {
+    let textToAnalyze = req.query.text
+    const analyzeParams = 
+    {
+        "text": textToAnalyze,
+        "features": {
+            "keywords": {
+                "sentiment": true,
+                "limit": 5
+            }
+        }
+    }
+    console.log('Parametros ' + JSON.stringify(analyzeParams))
+
+    const naturalLanguageUnderstanding = getNLUInstance();
+
+    naturalLanguageUnderstanding.analyze(analyzeParams)
+    .then(analysisResults => {
+        //Retrieve the sentiment and return it as a formatted string
+        console.log('Analisis' + JSON.stringify(analysisResults))
+        return res.send(analysisResults.result.keywords[0].sentiment,null,2);
+    })
+    .catch(err => {
+        return res.send("Could not do desired operation "+err);
+    });
 });
 
 let server = app.listen(8080, () => {
